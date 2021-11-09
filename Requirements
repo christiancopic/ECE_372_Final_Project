@@ -1,0 +1,18 @@
+Lap Timer Project
+
+#timer.cpp
+1.	μS timer
+2.	mS timer
+
+#lcd.cpp
+1.	Copy lab 3 code
+2.	Display “Fastest run:”
+            “######s”
+#lidar.cpp
+1.	Initialize laser
+2.	Set up interrupt
+
+#main.cpp
+1.	Use state machine to run through wait_to_start, passing_start, wait_to_finish, passing_finish
+2.	Interrupt from switch to reset the system
+3.	Interrupt from laser
