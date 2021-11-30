@@ -5,6 +5,8 @@
 #include <avr/io.h>
 #include <string.h>
 #include <time.h>
+#include "spi.h"
+#include "switch.h"
 
 
 #define echoPin 19   //attach pin D2 of Arduino to pin Echo of HC-SR04
@@ -29,6 +31,17 @@ typedef enum stateEnum{
 
 volatile stateType state = wait_start;
 
+//Define set of setates for switch debouncing
+typedef enum stateEnum{
+    wait_press,
+    bounce_low,
+    wait_release,
+    bounce_high
+  } switchState;
+
+
+volatile switchState switch_state = wait_press;
+
 void initUSS(){
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
@@ -42,6 +55,8 @@ int main(){
   initTimer1();
   initLCD();
   initUSS();
+  initSwitchPB3();
+  initSPI();
   
   double diff;
 
@@ -89,7 +104,23 @@ int main(){
       }
     }
 
+    //Button Press state Machine
+    switch(switch_state){
+        case wait_press:
+          break;
+        case bounce_low:
+          delayMs(1);
+          switch_state = wait_release;
+          break;
+        case wait_release:
+          break;
+        case bounce_high:
+          delayMs(1);
+          switch_state = wait_press;
+          break;
+      }
 
+    //Timer state machine
     switch(state){
       case wait_start:
         break;
@@ -111,22 +142,44 @@ int main(){
           writeString(timeString);
           moveCursor(1,8);
           writeString("s");
-          //TODO: Display smiley face
+          //Display smiley face
+          display(0x01,0b00000000);
+          display(0x02,0b00100000);
+          display(0x03,0b01000100);
+          display(0x04,0b10000000);
+          display(0x05,0b10000000);
+          display(0x06,0b01000100);
+          display(0x07,0b00100000);
+          display(0x08,0b00000000);
         }
         else{
-          //TODO: Display frownie face
+          //Display frownie face
+          display(0x01,0b00000000);
+          display(0x02,0b01000000);
+          display(0x03,0b00100100);
+          display(0x04,0b00010000);
+          display(0x05,0b00010000);
+          display(0x06,0b00100100);
+          display(0x07,0b01000000);
+          display(0x08,0b00000000);
         }
         delayMs(3000);  //Calculate vehicle speed to get this time
         state = wait_finish;
         break;
     }
-    
   }
-
   return 0;
 }
 
 ISR(PCINT0_vect){
+  //Handle button press
+  if (switch_state == wait_press){
+    switch_state = bounce_low;
+  }
+  else if (switch_state == wait_release){
+    switch_state = bounce_high;
+  }
+  //Reset time counter
   state = wait_start;
   fastest_time = 0.0;
 }
