@@ -8,7 +8,7 @@
 /*
  * Initializes pull-up resistor on PB2 and sets it into input mode
  */
-void initSwitchPB3(){
+void initSwitchPB2(){
     DDRB &= ~(1<<DDB2);   //data direction to input
     PORTB |= (1<<PORTB2);    //enable pullup resistor
 
