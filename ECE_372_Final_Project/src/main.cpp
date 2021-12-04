@@ -4,7 +4,6 @@
 #include "timer.h"
 #include <avr/io.h>
 #include <string.h>
-#include <time.h>
 #include "spi.h"
 #include "switch.h"
 
@@ -18,12 +17,13 @@ double timeCount = 0.0;
 long duration;
 int distance;
 
-long INIT_DISTANCE = 150;
+long INIT_DISTANCE = 50;
 
 float fastest_time = 1000.0;
 long curr_time = 0;
-//clock_t curr_start;
-//clock_t curr_end;
+
+
+
 
 //Define set of states for lap state
 typedef enum stateEnum{
@@ -35,16 +35,16 @@ typedef enum stateEnum{
 
 volatile stateType state = wait_start;
 
-// //Define set of states for switch debouncing
-// typedef enum stateEnum{
-//     wait_press,
-//     bounce_low,
-//     wait_release,
-//     bounce_high
-//   } switchState;
+//Define set of states for switch debouncing
+typedef enum switchStateEnum{
+    wait_press,
+    bounce_low,
+    wait_release,
+    bounce_high
+  } switchState;
 
 
-// volatile switchState switch_state = wait_press;
+volatile switchState switch_state = wait_press;
 
 void initUSS(){
   pinMode(trigPin, OUTPUT);
@@ -58,18 +58,18 @@ int main(){
   initTimer0();
   initTimer1();
   initTimer3();
+  initSPI();
   initLCD();
   initUSS();
-  initSwitchPB3();
-  initSPI();
+  initSwitchPB7();
   
-  //double diff;
 
 
   Serial.begin(9600); //baud rate
   sei();
 
-
+  delayMs(2000);
+  Serial.println("Printing, 'Fastest Time'");
   moveCursor(0,0);
   writeString("Fastest Time:");
 
@@ -88,57 +88,44 @@ int main(){
     //Calculate Distance
     distance = duration*0.034/2;
 
-    // Serial.print("Distance: ");
-    // Serial.print(distance);
-    // Serial.println(" cm");
-    //Serial.print(state);
+    //Timer debugging
     Serial.println(fastest_time);
-    Serial.println(curr_time/10.0);
+    Serial.println(curr_time/100.0);
     Serial.println(state);
 
 
     if (distance < INIT_DISTANCE){
       if(state == wait_start){
-        //timeCount = 0.0;
         //Reset timer
         curr_time = 0;
         state = pass_start;
       }
       else if(state == wait_finish){
-        // curr_end = clock();
-        // diff = curr_end-curr_start;
-        // curr_start = curr_end;
-        // Serial.println(diff);
         state = pass_finish;
-        //Reset timer
-        
-        // //restart timer
-        // timeCount = 0.0;
       }
     }
 
-    // //Button Press state Machine
-    // switch(switch_state){
-    //     case wait_press:
-    //       break;
-    //     case bounce_low:
-    //       delayMs(1);
-    //       switch_state = wait_release;
-    //       break;
-    //     case wait_release:
-    //       break;
-    //     case bounce_high:
-    //       delayMs(1);
-    //       switch_state = wait_press;
-    //       break;
-    //   }
+    //Button Press state Machine
+    switch(switch_state){
+        case wait_press:
+          break;
+        case bounce_low:
+          delayMs(1);
+          switch_state = wait_release;
+          break;
+        case wait_release:
+          break;
+        case bounce_high:
+          delayMs(1);
+          switch_state = wait_press;
+          break;
+      }
 
     //Timer state machine
     switch(state){
       case wait_start:
         break;
       case pass_start:
-        //curr_start = clock(); 
         delayMs(3000);  //Calculate vehicle speed to get this time
         state = wait_finish;
         break;
@@ -152,6 +139,8 @@ int main(){
           char timeString[50];
           dtostrf(fastest_time, 4, 3, timeString);
           //Display on LCD
+          moveCursor(1,0);
+          writeString("            ");
           moveCursor(1,0);
           writeString(timeString);
           moveCursor(1,8);
@@ -182,26 +171,25 @@ int main(){
         state = wait_finish;
         break;
     }
-    //delayMs(1);
-    //timeCount += 1 + loopTime;
   }
   return 0;
 }
 
-// ISR(PCINT0_vect){
-//   //Handle button press
-//   if (switch_state == wait_press){
-//     switch_state = bounce_low;
-//   }
-//   else if (switch_state == wait_release){
-//     switch_state = bounce_high;
-//   }
-//   //Reset time counter
-//   state = wait_start;
-//   fastest_time = 0.0;
-// }
+ISR(PCINT0_vect){
+  //Handle button press
+  if (switch_state == wait_press){
+    switch_state = bounce_low;
+  }
+  else if (switch_state == wait_release){
+    switch_state = bounce_high;
+  }
+  //Reset time counter
+  state = wait_start;
+  fastest_time = 100.0;
+  moveCursor(1,0);
+  writeString("restart     ");
+}
 
 ISR(TIMER3_COMPA_vect){
   curr_time += 1;
-  //Serial.println(curr_time/100.0);
 }
