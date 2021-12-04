@@ -67,5 +67,23 @@ void delayMs(unsigned int delay){
             TIFR0 |= (1<<OCF0A);
         }
     }
-   
+
+}
+
+void initTimer3(){
+       //set waveform generation bits for CTC mode
+    //      WGM33 = 0; WGM32 = 0; WGM31 = 1; WGM30 = 0;
+    TCCR3A &= ~(1<<WGM30);
+    TCCR3B &= ~(1<<WGM32);
+    TCCR3A |= (1<<WGM31);
+
+    // //set the prescaler to 64
+    // //CS32 = 0, CS31 = 1, CS30 = 1;
+    TCCR3B &= ~(1<<CS32);
+    TCCR3B |= (1<<CS31)|(1<<CS30);
+
+    OCR3A = 2500;
+
+    //Enable interrupt
+    TIMSK3 |= (1<<OCIE3A);
 }
