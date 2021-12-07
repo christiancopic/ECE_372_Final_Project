@@ -8,20 +8,20 @@
 #include "switch.h"
 
 
-#define echoPin 19   //attach pin D2 of Arduino to pin Echo of HC-SR04
-#define trigPin 18   //attach pin D3 of Arduino to pin Trig of HC-SR04
+#define echoPin 19 //PORTD2 //19   //attach pin D2 of Arduino to pin Echo of HC-SR04
+#define trigPin 18 //PORTD3 //18   //attach pin D3 of Arduino to pin Trig of HC-SR04
 
 double loopTime = 0.0;
 double timeCount = 0.0;
 
 long duration;
-int distance;
+int distance = 1000;
+int prev_dist = 1000;
 
 long INIT_DISTANCE = 50;
 
 float fastest_time = 1000.0;
 long curr_time = 0;
-
 
 
 
@@ -47,9 +47,12 @@ typedef enum switchStateEnum{
 volatile switchState switch_state = wait_press;
 
 void initUSS(){
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-  Serial.begin(9600);
+	DDRD |= (1 << DDD3);
+  //pinMode(trigPin, OUTPUT);
+  //pinMode(echoPin, INPUT);
+	DDRD &= ~(1 << DDD2);
+	PORTD |= (1 << PORTD2);
+  //Serial.begin(9600);
 }
 
 
@@ -64,12 +67,11 @@ int main(){
   initSwitchPB7();
   
 
-
   Serial.begin(9600); //baud rate
   sei();
 
-  delayMs(2000);
-  Serial.println("Printing, 'Fastest Time'");
+  //delayMs(2000);
+  //Serial.println("Printing, 'Fastest Time'");
   moveCursor(0,0);
   writeString("Fastest Time:");
 
@@ -77,24 +79,30 @@ int main(){
 
   while(1){
     //Clear trigPin condition
-    digitalWrite(trigPin, LOW);
+    //digitalWrite(trigPin, LOW);
+		PORTD &= ~(1<<PORTD3);
     delayUs(2);
     //Set the trigPin HIGH
-    digitalWrite(trigPin, HIGH);
+    //digitalWrite(trigPin, HIGH);
+		PORTD |= (1<<PORTD3);
     delayUs(10);
-    digitalWrite(trigPin, LOW);
+    //digitalWrite(trigPin, LOW);
+		PORTD &= ~(1<<PORTD3);
     //Read echoPin, returns sound wave travel time in Us
+		
     duration = pulseIn(echoPin, HIGH);
     //Calculate Distance
+		prev_dist = distance;
     distance = duration*0.034/2;
 
     //Timer debugging
-    Serial.println(fastest_time);
-    Serial.println(curr_time/100.0);
-    Serial.println(state);
+    //Serial.println(fastest_time);
+    //Serial.println(curr_time/100.0);
+    //Serial.println(state);
+		//Serial.println(distance);
 
 
-    if (distance < INIT_DISTANCE){
+    if ((distance < INIT_DISTANCE) && (prev_dist < INIT_DISTANCE)){
       if(state == wait_start){
         //Reset timer
         curr_time = 0;
@@ -176,6 +184,7 @@ int main(){
 }
 
 ISR(PCINT0_vect){
+	//cli();
   //Handle button press
   if (switch_state == wait_press){
     switch_state = bounce_low;
@@ -188,6 +197,7 @@ ISR(PCINT0_vect){
   fastest_time = 100.0;
   moveCursor(1,0);
   writeString("restart     ");
+	//sei();
 }
 
 ISR(TIMER3_COMPA_vect){
