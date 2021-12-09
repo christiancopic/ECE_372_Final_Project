@@ -14,9 +14,12 @@
 double loopTime = 0.0;
 double timeCount = 0.0;
 
+bool flag = true;
+
 long duration;
 int distance = 1000;
 int prev_dist = 1000;
+int prev_prev_dist = 1000;
 
 long INIT_DISTANCE = 50;
 
@@ -92,17 +95,29 @@ int main(){
 		
     duration = pulseIn(echoPin, HIGH);
     //Calculate Distance
+    prev_prev_dist = prev_dist;
 		prev_dist = distance;
     distance = duration*0.034/2;
 
     //Timer debugging
     //Serial.println(fastest_time);
     //Serial.println(curr_time/100.0);
-    //Serial.println(state);
-		//Serial.println(distance);
+    // Serial.println(state);
+		// Serial.println(distance);
 
+    if(flag){
+      flag = false;
+      state = wait_start;
+    }
 
-    if ((distance < INIT_DISTANCE) && (prev_dist < INIT_DISTANCE)){
+    if ((distance < INIT_DISTANCE) && (prev_dist < INIT_DISTANCE) && (prev_prev_dist < INIT_DISTANCE)){
+			// Serial.print("Distance: ");
+			Serial.println(distance);
+      Serial.println(prev_dist);
+      Serial.println(prev_prev_dist);
+      Serial.println(state);
+			// Serial.print("Begginng of if statement ");
+			// Serial.println(state);
       if(state == wait_start){
         //Reset timer
         curr_time = 0;
@@ -111,6 +126,9 @@ int main(){
       else if(state == wait_finish){
         state = pass_finish;
       }
+
+			// Serial.print("End of if statement ");
+			// Serial.println(state);
     }
 
     //Button Press state Machine
@@ -176,6 +194,8 @@ int main(){
           display(0x08,0b00000000);
         }
         delayMs(3000);  //Calculate vehicle speed to get this time
+        //Serial.print("here");
+        //Serial.println(state);
         state = wait_finish;
         break;
     }
@@ -197,6 +217,7 @@ ISR(PCINT0_vect){
   fastest_time = 100.0;
   moveCursor(1,0);
   writeString("restart     ");
+  flag = true;
 	//sei();
 }
 
