@@ -1,3 +1,13 @@
+/*
+Formula 1 Club lap timer.
+This code records how long a lap takes on a formula race track using an ultra sonic sensor to detect distance.
+When the car passes by the sensor, the sensor detects a smaller distance, which indicates a car has gone by and
+either starts or stops the timer depending on which state it is in.
+
+By: Christian Copic, Nick Smith, Megan Mickey, Ryann Buloe
+*/
+
+
 #include <Arduino.h>
 #include <stdio.h>
 #include "lcd.h"
@@ -10,7 +20,7 @@
 
 bool flag = true; //flag for switch interrupt
 
-int distance = 1000;  //distance variables
+int distance = 1000;  //distance variables (for multiple cycles)
 int prev_dist = 1000;
 int prev_prev_dist = 1000;
 
@@ -59,9 +69,9 @@ int main(){
     
     prev_prev_dist = prev_dist;
 	  prev_dist = distance;
-    distance = calcDist();
+    distance = calcDist();  //grab distance from sensor
 
-    if(flag){
+    if(flag){ //check to see if we just came out of button interrupt and fix state
       flag = false;
       state = wait_start;
     }
@@ -98,7 +108,7 @@ int main(){
       case wait_start:
         break;
       case pass_start:
-        delayMs(3000);  //Calculate vehicle speed to get this time
+        delayMs(3000);  //Prevent the car from triggering the sensor multiple times as it passes
         state = wait_finish;
         break;
       case wait_finish:
@@ -163,6 +173,6 @@ ISR(PCINT0_vect){
   flag = true;
 }
 
-ISR(TIMER3_COMPA_vect){ //timer interrupt
+ISR(TIMER3_COMPA_vect){ //timer interrupt to add time
   curr_time += 1;
 }
