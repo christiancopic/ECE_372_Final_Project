@@ -6,27 +6,18 @@
 #include <string.h>
 #include "spi.h"
 #include "switch.h"
+#include "uss.h"
 
+bool flag = true; //flag for switch interrupt
 
-#define echoPin 19 //PORTD2 //19   //attach pin D2 of Arduino to pin Echo of HC-SR04
-#define trigPin 18 //PORTD3 //18   //attach pin D3 of Arduino to pin Trig of HC-SR04
-
-double loopTime = 0.0;
-double timeCount = 0.0;
-
-bool flag = true;
-
-long duration;
-int distance = 1000;
+int distance = 1000;  //distance variables
 int prev_dist = 1000;
 int prev_prev_dist = 1000;
 
-long INIT_DISTANCE = 50;
+long INIT_DISTANCE = 50;  //trigger distance
 
-float fastest_time = 1000.0;
+float fastest_time = 1000.0;  //lap variables
 long curr_time = 0;
-
-
 
 //Define set of states for lap state
 typedef enum stateEnum{
@@ -49,16 +40,6 @@ typedef enum switchStateEnum{
 
 volatile switchState switch_state = wait_press;
 
-void initUSS(){
-	DDRD |= (1 << DDD3);
-  //pinMode(trigPin, OUTPUT);
-  //pinMode(echoPin, INPUT);
-	DDRD &= ~(1 << DDD2);
-	PORTD |= (1 << PORTD2);
-  //Serial.begin(9600);
-}
-
-
 int main(){
   //initialize everything
   initTimer0();
@@ -69,55 +50,23 @@ int main(){
   initUSS();
   initSwitchPB7();
   
-
   Serial.begin(9600); //baud rate
   sei();
-
-  //delayMs(2000);
-  //Serial.println("Printing, 'Fastest Time'");
   moveCursor(0,0);
   writeString("Fastest Time:");
 
-  
-
   while(1){
-    //Clear trigPin condition
-    //digitalWrite(trigPin, LOW);
-		PORTD &= ~(1<<PORTD3);
-    delayUs(2);
-    //Set the trigPin HIGH
-    //digitalWrite(trigPin, HIGH);
-		PORTD |= (1<<PORTD3);
-    delayUs(10);
-    //digitalWrite(trigPin, LOW);
-		PORTD &= ~(1<<PORTD3);
-    //Read echoPin, returns sound wave travel time in Us
-		
-    duration = pulseIn(echoPin, HIGH);
-    //Calculate Distance
+    
     prev_prev_dist = prev_dist;
-		prev_dist = distance;
-    distance = duration*0.034/2;
-
-    //Timer debugging
-    //Serial.println(fastest_time);
-    //Serial.println(curr_time/100.0);
-    // Serial.println(state);
-		// Serial.println(distance);
+	  prev_dist = distance;
+    distance = calcDist();
 
     if(flag){
       flag = false;
       state = wait_start;
     }
 
-    if ((distance < INIT_DISTANCE) && (prev_dist < INIT_DISTANCE) && (prev_prev_dist < INIT_DISTANCE)){
-			// Serial.print("Distance: ");
-			Serial.println(distance);
-      Serial.println(prev_dist);
-      Serial.println(prev_prev_dist);
-      Serial.println(state);
-			// Serial.print("Begginng of if statement ");
-			// Serial.println(state);
+    if ((distance < INIT_DISTANCE) && (prev_dist < INIT_DISTANCE) && (prev_prev_dist < INIT_DISTANCE)){ //check if car passed through sensor
       if(state == wait_start){
         //Reset timer
         curr_time = 0;
@@ -126,9 +75,6 @@ int main(){
       else if(state == wait_finish){
         state = pass_finish;
       }
-
-			// Serial.print("End of if statement ");
-			// Serial.println(state);
     }
 
     //Button Press state Machine
@@ -194,8 +140,6 @@ int main(){
           display(0x08,0b00000000);
         }
         delayMs(3000);  //Calculate vehicle speed to get this time
-        //Serial.print("here");
-        //Serial.println(state);
         state = wait_finish;
         break;
     }
@@ -204,7 +148,6 @@ int main(){
 }
 
 ISR(PCINT0_vect){
-	//cli();
   //Handle button press
   if (switch_state == wait_press){
     switch_state = bounce_low;
@@ -218,9 +161,8 @@ ISR(PCINT0_vect){
   moveCursor(1,0);
   writeString("restart     ");
   flag = true;
-	//sei();
 }
 
-ISR(TIMER3_COMPA_vect){
+ISR(TIMER3_COMPA_vect){ //timer interrupt
   curr_time += 1;
 }
